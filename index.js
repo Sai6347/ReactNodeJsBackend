@@ -18,8 +18,8 @@ const upload = multer({ storage: storage });
 const db = mysql.createConnection({
     host:"localhost",
     user:"root",
-    password:"12345",
-    database:"aita"
+    password:"",
+    database:"property_mgmt_system"
 })
 
 app.use(express.json())
@@ -57,17 +57,20 @@ app.get("/getEmpDoc/:id", (req, res) => {
     }
 });
 
-app.post("/addEmp", upload.single('file'), async (req, res) => {
+app.post("/addUser", upload.single('file'), async (req, res) => {
   try {
 
     const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
 
-    const q = "INSERT INTO employee (`name`,`mobile`,`password`,`role`,`file`) VALUES (?,?,?,?,?)";
+    const q = "insert into user (`first_name`, `last_name`, `email`, `password`, `mobile_number`, `social_media_account`, `profile_picture`) VALUES (?,?,?,?,?,?,?)";
     const values = [
-      req.body.name,
-      req.body.mobile,
+      req.body.firstName,
+      req.body.lastName,
+      req.body.email,
       hashedPassword,
-      req.body.role,
+      req.body.mobile,
+      req.body.socialmedia,
+      // req.body.date,
       req.file.buffer
     ];
 
@@ -76,8 +79,8 @@ app.post("/addEmp", upload.single('file'), async (req, res) => {
         return res.status(500).json(insertErr);
       }
 
-      const employeeId = insertResult.insertId;
-      const documentPath = path.join(employeeDocumentsDirectory, `employee_${employeeId}.pdf`);
+      const userId = insertResult.insertId;
+      const documentPath = path.join(employeeDocumentsDirectory, `user_${userId}`);
 
       fs.writeFile(documentPath, req.file.buffer, (writeErr) => {
         if (writeErr) {
@@ -167,7 +170,7 @@ app.post("/login", (req, res) => {
 
 
 
-app.put("/editEmp/:id", upload.single('file'), async (req, res) => {
+app.put("/editUser/:id", upload.single('file'), async (req, res) => {
   const empId = req.params.id;
   const q = "UPDATE employee SET `name` = ?, `mobile` = ?, `password` = ?, `role` = ?, `file` = ? WHERE id = ?";
 
