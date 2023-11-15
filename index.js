@@ -6,6 +6,8 @@ import fs from "fs";
 import path from "path";
 import bcrypt from "bcrypt";
 const saltRounds = 10;
+import jwt from "jsonwebtoken";
+import cookieParser from "cookie-parser";
 
 const __dirname = path.resolve();
 const app =express()
@@ -25,6 +27,7 @@ app.use(express.json())
 // app.use(cors())
 app.use(cors({ 
   origin: 'http://localhost:3000', 
+  methods: ["POST","GET","PUT"],
   credentials: true 
 }));
 
@@ -32,7 +35,7 @@ const employeeDocumentsDirectory = path.join(__dirname, "employee_documents");
 app.use("/employee_documents", express.static(employeeDocumentsDirectory));
 
 app.get("/", (req,res) => {
-    res.json("Hello now you are connected to the backend....")
+    res.json("Success")
 })
 
 app.get("/getEmp", (req,res) => {
@@ -56,14 +59,14 @@ app.get("/getEmpDoc/:id", (req, res) => {
 
 app.post("/addEmp", upload.single('file'), async (req, res) => {
   try {
-    // Hash the password
+
     const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
 
     const q = "INSERT INTO employee (`name`,`mobile`,`password`,`role`,`file`) VALUES (?,?,?,?,?)";
     const values = [
       req.body.name,
       req.body.mobile,
-      hashedPassword, // Use the hashed password instead of the plain text password
+      hashedPassword,
       req.body.role,
       req.file.buffer
     ];
@@ -99,6 +102,29 @@ app.get("/getEmp/:id", (req, res) => {
     });
 });
 
+const verifyUser = (req, res, next) => {
+  const token = req.cookies.token;
+
+  if(!token){
+    return res.json({Error: "You are not Authenticated"});
+  }else{
+    jwt.verify(token, "jwt-secret-key", (err,decoded) => {
+      if(err) {
+        return res.json({Error: "Token is not okay"});
+      } else {
+        req.name = decoded.name;
+        console.log(req.name);
+        next();
+      }
+    })
+  }
+}
+
+app.get('/', verifyUser, (req,res) => {
+  return res.json({Status : "Success", name: req.name});
+})
+
+
 app.post("/login", (req, res) => {
   const q = "SELECT * FROM employee WHERE `mobile`=?";
   const values = [req.body.mobile];
@@ -113,15 +139,19 @@ app.post("/login", (req, res) => {
 
       try {
         
-        // console.log('Provided Password:', req.body.password);
-        // console.log('Stored Hashed Password:', storedHashedPassword);
-
         const passwordMatch = await bcrypt.compare(req.body.password, storedHashedPassword);
 
-        console.log('Password Match:', passwordMatch);
-
         if (passwordMatch) {
-          return res.json(data[0]);
+
+          const name = data[0].name;
+          const token = jwt.sign({name}, "jwt-secret-key", {expiresIn: '2m'});
+          
+          res.cookie('token', token, { expires: new Date(Date.now() + 120000), httpOnly: true });
+          // res.cookie('token', token);
+          // return res.json(data[0]);
+          // return res.json({Status: "Success"})
+          return res.json({ status: "Success", name: data[0].name })
+          
         } else {
           return res.status(401).json({ message: "Credentials not matched" });
         }
@@ -134,6 +164,7 @@ app.post("/login", (req, res) => {
     }
   });
 });
+
 
 
 app.put("/editEmp/:id", upload.single('file'), async (req, res) => {
