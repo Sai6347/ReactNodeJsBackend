@@ -38,17 +38,17 @@ app.get("/", (req,res) => {
     res.json("Success")
 })
 
-app.get("/getEmp", (req,res) => {
-    const q = "select * from employee"
+app.get("/getUser", (req,res) => {
+    const q = "select * from user"
     db.query(q,(err,data)=>{
         if(err) return res.json(err)
         return res.json(data)
     })
 })
 
-app.get("/getEmpDoc/:id", (req, res) => {
-    const empId = req.params.id;
-    const documentPath = path.join(employeeDocumentsDirectory, `employee_${empId}.pdf`);
+app.get("/getUserDoc/:id", (req, res) => {
+    const userId = req.params.id;
+    const documentPath = path.join(employeeDocumentsDirectory, `user_${userId}.pdf`);
   
     if (fs.existsSync(documentPath)) {
       res.sendFile(documentPath);
@@ -95,9 +95,9 @@ app.post("/addUser", upload.single('file'), async (req, res) => {
   }
 });
 
-app.get("/getEmp/:id", (req, res) => {
+app.get("/getUser/:id", (req, res) => {
     const empId = req.params.id;
-    const q = "select * from employee where id = ?";
+    const q = "select * from user where id = ?";
 
     db.query(q, [empId], (err, data) => {
         if (err) return res.json(err);
