@@ -156,7 +156,7 @@ app.post("/login", (req, res) => {
           return res.json({ status: "Success", name: data[0].name })
           
         } else {
-          return res.status(401).json({ message: "Credentials not matched" });
+          return res.status(401).json({ message: "Credentials mismatched" });
         }
       } catch (compareError) {
         console.error(compareError);
