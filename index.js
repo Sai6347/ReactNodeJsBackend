@@ -115,6 +115,7 @@ const verifyUser = (req, res, next) => {
         return res.status(403).json({ status: 'Error', message: 'Forbidden' });
       } else {
         req.user = decoded;
+        console.log("Verification completed");
         console.log(req.user);
         next();
       }
@@ -122,7 +123,7 @@ const verifyUser = (req, res, next) => {
   }
 }
 
-app.get('/', verifyUser, (req,res) => {
+app.get('/verify', verifyUser, (req,res) => {
   return res.json({Status : "Success", name: req.user.name});
 })
 
@@ -155,8 +156,16 @@ app.post("/login", (req, res) => {
           const secretKey = 'your_secret_key';
           const expiresIn = '1m';
           const token = jwt.sign(user, secretKey, { expiresIn });
-          
+          console.log(token);
+          // jwt.verify(token, secretKey, function(err,decoded)
+          // {
+          //   console.log(decoded);
+          // });
+
+
           return res.json({ status: "Success", token });
+
+          
 
           
         } else {
