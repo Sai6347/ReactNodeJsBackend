@@ -129,7 +129,7 @@ app.get('/', verifyUser, (req,res) => {
 
 
 app.post("/login", (req, res) => {
-  const q = "SELECT * FROM employee WHERE `mobile`=?";
+  const q = "SELECT * FROM user WHERE `mobile_number`=?";
   const values = [req.body.mobile];
 
   db.query(q, values, async (err, data) => {
@@ -172,7 +172,7 @@ app.post("/login", (req, res) => {
 
 app.put("/editUser/:id", upload.single('file'), async (req, res) => {
   const empId = req.params.id;
-  const q = "UPDATE employee SET `name` = ?, `mobile` = ?, `password` = ?, `role` = ?, `file` = ? WHERE id = ?";
+  const q = "UPDATE user SET `name` = ?, `mobile` = ?, `password` = ?, `role` = ?, `file` = ? WHERE id = ?";
 
   try {
       const hashedPassword = await bcrypt.hash(req.body.password, 10);
@@ -199,13 +199,13 @@ app.put("/editUser/:id", upload.single('file'), async (req, res) => {
 });
 
 
-app.delete("/deleteEmp/:id", (req,res) => {
+app.delete("/deleteUser/:id", (req,res) => {
     const empId = req.params.id;
-    const q = "delete from employee where id = ?";
+    const q = "delete from user where id = ?";
 
     db.query(q, [empId], (err,data) => {
         if(err) return res.json(err);
-        return res.json("Employee Deleted Successfully");
+        return res.json("User Deleted Successfully");
     })
 })
 
