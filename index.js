@@ -7,7 +7,6 @@ import path from "path";
 import bcrypt from "bcrypt";
 const saltRounds = 10;
 import jwt from "jsonwebtoken";
-import cookieParser from "cookie-parser";
 
 const __dirname = path.resolve();
 const app =express()
@@ -106,17 +105,17 @@ app.get("/getUser/:id", (req, res) => {
 });
 
 const verifyUser = (req, res, next) => {
-  const token = req.cookies.token;
+  const token =  req.headers.authorization && req.headers.authorization.split(' ')[1];
 
   if(!token){
-    return res.json({Error: "You are not Authenticated"});
+    return res.status(401).json({ status: 'Error', message: 'Unauthorized' });
   }else{
     jwt.verify(token, "jwt-secret-key", (err,decoded) => {
       if(err) {
-        return res.json({Error: "Token is not okay"});
+        return res.status(403).json({ status: 'Error', message: 'Forbidden' });
       } else {
-        req.name = decoded.name;
-        console.log(req.name);
+        req.user = decoded;
+        console.log(req.user);
         next();
       }
     })
@@ -124,7 +123,7 @@ const verifyUser = (req, res, next) => {
 }
 
 app.get('/', verifyUser, (req,res) => {
-  return res.json({Status : "Success", name: req.name});
+  return res.json({Status : "Success", name: req.user.name});
 })
 
 
@@ -146,14 +145,19 @@ app.post("/login", (req, res) => {
 
         if (passwordMatch) {
 
-          const name = data[0].name;
-          const token = jwt.sign({name}, "jwt-secret-key", {expiresIn: '2m'});
+          const user = {
+            id: data[0].id,
+            mobile : data[0].mobile,
+            password: data[0].password,
+            
+          };
+
+          const secretKey = 'your_secret_key';
+          const expiresIn = '1m';
+          const token = jwt.sign(user, secretKey, { expiresIn });
           
-          res.cookie('token', token, { expires: new Date(Date.now() + 120000), httpOnly: true });
-          // res.cookie('token', token);
-          // return res.json(data[0]);
-          // return res.json({Status: "Success"})
-          return res.json({ status: "Success", name: data[0].name })
+          return res.json({ status: "Success", token });
+
           
         } else {
           return res.status(401).json({ message: "Credentials mismatched" });
