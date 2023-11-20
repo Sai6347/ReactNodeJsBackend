@@ -1,18 +1,15 @@
 import express from "express";
 import mysql from "mysql";
-import cors from "cors";
-import multer from 'multer';
+import cors from "cors"; 
 import fs from "fs";
 import path from "path";
 import bcrypt from "bcrypt";
 const saltRounds = 10;
-import jwt from "jsonwebtoken";
-
+import jwt from "jsonwebtoken"; 
 const __dirname = path.resolve();
 const app =express()
 
-const storage = multer.memoryStorage(); 
-const upload = multer({ storage: storage });
+ 
 
 const db = mysql.createConnection({
     host:"localhost",
@@ -32,9 +29,13 @@ app.use(cors({
 
 const employeeDocumentsDirectory = path.join(__dirname, "employee_documents");
 app.use("/employee_documents", express.static(employeeDocumentsDirectory));
-
+ 
 app.get("/", (req,res) => {
     res.json("Success")
+})
+app.post("/setuser",  (req,res) => { 
+console.log('------------------------------')
+  console.log(req.body);
 })
 
 app.get("/getUser", (req,res) => {
@@ -56,10 +57,11 @@ app.get("/getUserDoc/:id", (req, res) => {
     }
 });
 
-app.post("/addUser", upload.single('file'), async (req, res) => {
+app.post("/addUser",   async (req, res) => {
   try {
 
     const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+    console.log(req.body);
 
     const q = "insert into user (`first_name`, `last_name`, `email`, `password`, `mobile_number`, `social_media_account`, `profile_picture`) VALUES (?,?,?,?,?,?,?)";
     const values = [
@@ -156,7 +158,7 @@ app.post("/login", (req, res) => {
           const secretKey = 'your_secret_key';
           const expiresIn = '1m';
           const token = jwt.sign(user, secretKey, { expiresIn });
-          console.log(token);
+          // console.log(token);
           // jwt.verify(token, secretKey, function(err,decoded)
           // {
           //   console.log(decoded);
@@ -183,7 +185,7 @@ app.post("/login", (req, res) => {
 
 
 
-app.put("/editUser/:id", upload.single('file'), async (req, res) => {
+app.put("/editUser/:id",   async (req, res) => {
   const empId = req.params.id;
   const q = "UPDATE user SET `name` = ?, `mobile` = ?, `password` = ?, `role` = ?, `file` = ? WHERE id = ?";
 
