@@ -2,6 +2,7 @@ import express from "express";
 import mysql from "mysql";
 import cors from "cors"; 
 import fs from "fs";
+import multer from 'multer';
 import path from "path";
 import bcrypt from "bcrypt";
 const saltRounds = 10;
@@ -20,6 +21,9 @@ const db = mysql.createConnection({
 
 app.use(express.json())
 
+const storage = multer.memoryStorage(); 
+const upload = multer({ storage: storage });
+
 // app.use(cors())
 app.use(cors({ 
   origin: 'http://localhost:3000', 
@@ -27,8 +31,11 @@ app.use(cors({
   credentials: true 
 }));
 
-const employeeDocumentsDirectory = path.join(__dirname, "employee_documents");
-app.use("/employee_documents", express.static(employeeDocumentsDirectory));
+const userDirectory = path.join(__dirname, "user_images");
+app.use("/user_images", express.static(userDirectory));
+
+const propertyImages = path.join(__dirname, "property_images");
+app.use("/property_images", express.static(propertyImages));
  
 app.get("/", (req,res) => {
     res.json("Success")
@@ -48,16 +55,16 @@ app.get("/getUser", (req,res) => {
 
 app.get("/getUserDoc/:id", (req, res) => {
     const userId = req.params.id;
-    const documentPath = path.join(employeeDocumentsDirectory, `user_${userId}.pdf`);
+    const imagePath = path.join(userDirectory, `user_${userId}.jpg`);
   
-    if (fs.existsSync(documentPath)) {
-      res.sendFile(documentPath);
+    if (fs.existsSync(imagePath)) {
+      res.sendFile(imagePath);
     } else {
-      res.status(404).send("Document not found");
+      res.status(404).send("Image not found");
     }
 });
 
-app.post("/addUser",   async (req, res) => {
+app.post("/addUser", upload.single('file'), async (req, res) => {
   try {
 
     const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
@@ -71,9 +78,13 @@ app.post("/addUser",   async (req, res) => {
       hashedPassword,
       req.body.mobile,
       req.body.socialmedia,
-      // req.body.date,
-      req.file.buffer
+      // req.file.buffer
+      path.join("/user_images", `user_${req.file.originalname}`)
     ];
+
+    if (!fs.existsSync(userDirectory)) {
+      fs.mkdirSync(userDirectory);
+    }
 
     db.query(q, values, async (insertErr, insertResult) => {
       if (insertErr) {
@@ -81,14 +92,57 @@ app.post("/addUser",   async (req, res) => {
       }
 
       const userId = insertResult.insertId;
-      const documentPath = path.join(employeeDocumentsDirectory, `user_${userId}`);
+      const imagePath = path.join(userDirectory, `user_${userId}.jpg`);
 
-      fs.writeFile(documentPath, req.file.buffer, (writeErr) => {
+      fs.writeFile(imagePath, req.file.buffer, (writeErr) => {
         if (writeErr) {
           return res.status(500).json(writeErr);
         }
 
-        return res.json("Registration and document upload done successfully");
+        return res.json("Registration and image upload done successfully");
+      });
+    });
+  } catch (error) {
+    return res.status(500).json(error);
+  }
+});
+
+app.post("/addProperty", upload.single('file'), async (req, res) => {
+  try {
+    const q = "insert into property (`user_id`, `country`, `state`, `city`, `street_address`, `zipcode`, `property_type`, `property_desc`, `num_of_bed_rooms`, `num_of_bath_rooms`, `available_date_from`, `availability_status`, `num_of_units`, `property_images`, `location`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+    const values = [
+      req.body.userId,
+      req.body.country,
+      req.body.state,
+      req.body.city,
+      req.body.street,
+      req.body.zipcode,
+      req.body.propertyType,
+      req.body.propertyDesc,
+      req.body.bedrooms,
+      req.body.bathrooms,
+      req.body.availableDate,
+      req.body.availabilityStatus,
+      req.body.units,
+      // req.file.buffer,
+      path.join("/property_images", `${req.file.originalname}`),
+      req.body.location
+    ];
+
+    db.query(q, values, async (insertErr, insertResult) => {
+      if (insertErr) {
+        return res.status(500).json(insertErr);
+      }
+      
+      const propertyId = insertResult.insertId;
+      const imagePath = path.join(propertyImages, `property_${propertyId}.jpg`);
+
+      fs.writeFile(imagePath, req.file.buffer, (writeErr) => {
+        if (writeErr) {
+          return res.status(500).json(writeErr);
+        }
+        
+        return res.json("Property Added successfully");
       });
     });
   } catch (error) {
@@ -158,17 +212,8 @@ app.post("/login", (req, res) => {
           const secretKey = 'your_secret_key';
           const expiresIn = '1m';
           const token = jwt.sign(user, secretKey, { expiresIn });
-          // console.log(token);
-          // jwt.verify(token, secretKey, function(err,decoded)
-          // {
-          //   console.log(decoded);
-          // });
-
 
           return res.json({ status: "Success", token });
-
-          
-
           
         } else {
           return res.status(401).json({ message: "Credentials mismatched" });
@@ -183,6 +228,26 @@ app.post("/login", (req, res) => {
   });
 });
 
+
+app.get("/getProperty", (req,res) => {
+  const q = "select * from property";
+  db.query(q,(err,data)=>{
+      if(err) return res.json(err)
+      return res.json(data)
+  })
+})
+
+
+app.get("/getPropertyImg/:id", (req, res) => {
+  const propId = req.params.id;
+  const imagePath = path.join(propertyImages, `property_${propId}.jpg`);
+
+  if (fs.existsSync(imagePath)) {
+    res.sendFile(imagePath);
+  } else {
+    res.status(404).send("Image not found");
+  }
+});
 
 
 app.put("/editUser/:id",   async (req, res) => {
