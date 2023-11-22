@@ -109,6 +109,7 @@ app.post("/addUser", upload.single('file'), async (req, res) => {
 
 app.post("/addProperty", upload.single('file'), async (req, res) => {
   try {
+    const propertyId = Date.now();
     const q = "insert into property (`user_id`, `country`, `state`, `city`, `street_address`, `zipcode`, `property_type`, `property_desc`, `num_of_bed_rooms`, `num_of_bath_rooms`, `available_date_from`, `availability_status`, `num_of_units`, `property_images`, `location`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
     const values = [
       req.body.userId,
@@ -125,7 +126,7 @@ app.post("/addProperty", upload.single('file'), async (req, res) => {
       req.body.availabilityStatus,
       req.body.units,
       // req.file.buffer,
-      path.join("/property_images", `${req.file.originalname}`),
+      path.join(`${propertyId}`),
       req.body.location
     ];
 
@@ -134,8 +135,8 @@ app.post("/addProperty", upload.single('file'), async (req, res) => {
         return res.status(500).json(insertErr);
       }
       
-      const propertyId = insertResult.insertId;
-      const imagePath = path.join(propertyImages, `property_${propertyId}.jpg`);
+      // const propertyId = insertResult.insertId;
+      const imagePath = path.join(propertyImages, `${propertyId}.jpg`);
 
       fs.writeFile(imagePath, req.file.buffer, (writeErr) => {
         if (writeErr) {
@@ -240,7 +241,7 @@ app.get("/getProperty", (req,res) => {
 
 app.get("/getPropertyImg/:id", (req, res) => {
   const propId = req.params.id;
-  const imagePath = path.join(propertyImages, `property_${propId}.jpg`);
+  const imagePath = path.join(propertyImages, `${propId}.jpg`);
 
   if (fs.existsSync(imagePath)) {
     res.sendFile(imagePath);
